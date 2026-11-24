@@ -1,0 +1,26 @@
+# Secrets: never commit
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Editor / local tools (may contain connection details)
+.vscode/
+.idea/
+*.session.sql
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local Claude settings
+.claude/settings.local.json

@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Atlas Enterprise AI</title>
+  <meta name="description" content="Atlas: permission-aware answers from your company documents, with citations.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234f46e5'/%3E%3Cpath d='M16 7l8 18h-4l-1.6-4h-4.8L12 25H8l8-18zm0 7.5L14.6 18h2.8L16 14.5z' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="{{ url_for('static', path='css/styles.css') }}?v={{ v }}">
+</head>
+<body>
+  <div class="shell">
+    <!-- Sidebar / bottom nav -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">A</div>
+        <div class="brand-text">
+          <strong>Atlas</strong>
+          <span>Enterprise AI</span>
+        </div>
+      </div>
+
+      <nav class="nav" aria-label="Main">
+        <button class="nav-item active" data-view="chat" aria-current="page">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z"/></svg>
+          <span>Ask</span>
+        </button>
+        <button class="nav-item" data-view="documents">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg>
+          <span>Documents</span>
+        </button>
+        <button class="nav-item" data-view="approvals">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>
+          <span>Approvals</span>
+          <span class="nav-badge" id="approvalBadge" hidden>0</span>
+        </button>
+        <button class="nav-item" data-view="insights">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+          <span>Insights</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-foot">
+        <div class="env-row"><span class="dot" id="healthDot"></span><span id="healthText">Checking…</span></div>
+        <div class="env-row muted">Region · {{ region }}</div>
+        <div class="env-row muted">{{ mode }}</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="banner" id="banner" role="alert" hidden></div>
+
+      <!-- ===== Ask ===== -->
+      <section class="view active" id="view-chat" aria-labelledby="chatTitle">
+        <header class="view-head">
+          <div>
+            <h1 id="chatTitle">Ask Atlas</h1>
+            <p class="sub">Answers come only from documents you're allowed to see, with citations.</p>
+          </div>
+          <button class="btn ghost" id="newChatBtn" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            New chat
+          </button>
+        </header>
+
+        <div class="chat">
+          <div class="messages" id="messages" aria-live="polite">
+            <div class="empty-chat" id="emptyChat">
+              <div class="empty-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg>
+              </div>
+              <h2>What would you like to know?</h2>
+              <p>Upload documents in the Documents tab, then ask about them here.</p>
+              <div class="suggestions">
+                <button class="chip" type="button">What is our annual leave policy?</button>
+                <button class="chip" type="button">Summarize the onboarding handbook</button>
+                <button class="chip" type="button">Who approves travel expenses?</button>
+              </div>
+            </div>
+          </div>
+
+          <form class="composer" id="chatForm" autocomplete="off">
+            <textarea id="question" rows="1" maxlength="2000" placeholder="Ask a question about your documents…" aria-label="Your question" required></textarea>
+            <button class="btn primary send" id="sendBtn" type="submit" aria-label="Send">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l16-8-6 16-2-6z"/></svg>
+            </button>
+          </form>
+          <p class="hint">Enter to send · Shift+Enter for a new line</p>
+        </div>
+      </section>
+
+      <!-- ===== Documents ===== -->
+      <section class="view" id="view-documents" aria-labelledby="docsTitle">
+        <header class="view-head">
+          <div>
+            <h1 id="docsTitle">Documents</h1>
+            <p class="sub">PDF, DOCX, TXT or MD · up to 10 MB. Files are indexed right after upload.</p>
+          </div>
+          <button class="btn ghost" id="refreshDocsBtn" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg>
+            Refresh
+          </button>
+        </header>
+
+        <label class="dropzone" id="dropzone" for="fileInput">
+          <input type="file" id="fileInput" accept=".pdf,.docx,.txt,.md" multiple hidden>
+          <div class="dz-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>
+          </div>
+          <strong>Drop files here or <span class="link">browse</span></strong>
+          <span class="muted">They'll be uploaded to S3, chunked and embedded automatically.</span>
+        </label>
+
+        <ul class="uploads" id="uploads"></ul>
+
+        <div class="card table-card">
+          <table class="table">
+            <thead>
+              <tr><th>Title</th><th>Status</th><th class="hide-sm">Version</th><th class="hide-sm">Added</th></tr>
+            </thead>
+            <tbody id="docRows">
+              <tr><td colspan="4" class="muted center">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===== Approvals ===== -->
+      <section class="view" id="view-approvals" aria-labelledby="apprTitle">
+        <header class="view-head">
+          <div>
+            <h1 id="apprTitle">Approvals</h1>
+            <p class="sub">Requests to delete, export, send or update policy wait here for an admin. Approving records the decision only; nothing runs automatically.</p>
+          </div>
+          <button class="btn ghost" id="refreshApprovalsBtn" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg>
+            Refresh
+          </button>
+        </header>
+        <div class="approval-list" id="approvalList"><p class="muted">Loading…</p></div>
+      </section>
+
+      <!-- ===== Insights ===== -->
+      <section class="view" id="view-insights" aria-labelledby="insTitle">
+        <header class="view-head">
+          <div>
+            <h1 id="insTitle">Insights</h1>
+            <p class="sub">Document pipeline, answer feedback and guardrail activity for this workspace.</p>
+          </div>
+          <button class="btn ghost" id="refreshInsightsBtn" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg>
+            Refresh
+          </button>
+        </header>
+        <div class="stats" id="stats"></div>
+        <div class="grid-2">
+          <div class="card">
+            <h3>Documents by status</h3>
+            <div class="bars" id="docBars"></div>
+          </div>
+          <div class="card">
+            <h3>Guardrails</h3>
+            <div class="bars" id="guardBars"></div>
+            <p class="muted small" id="guardMode"></p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="{{ url_for('static', path='js/app.js') }}?v={{ v }}" defer></script>
+</body>
+</html>
